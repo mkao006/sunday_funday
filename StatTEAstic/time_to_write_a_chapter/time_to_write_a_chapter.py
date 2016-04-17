@@ -1,9 +1,22 @@
+##################################################################################
+## Title: This script scraps the time stamp on ck101.com to
+##        investigate the time required for a prticular author to
+##        complete a chapter.
+## 
+## Date: 2016-04-17
+## Author: Michael C. J. Kao
+##################################################################################
+
 from lxml import html
 import requests
 import urllib2
 import re
 from datetime import datetime
+from scipy.signal import savgol_filter
 
+##################################################################################
+## Define the helper functions
+##################################################################################
 
 def extract_time_stamp(string):
     time_stamp_char = re.search("[0-9]{4}\-[0-9]+\-[0-9]+.[0-9]{2}:[0-9]{2}", 
@@ -65,17 +78,16 @@ def calculate_hour_diff(time_stamps):
     return(hour_diff)
 
 
-
+##################################################################################
+## Scrap the data
+##################################################################################
 
 ## Current novel in the serie
 da_zhu_zai_time_stamp = get_catino_thread_time_stamps('2762483')
 da_zhu_zai_time_diff = calculate_hour_diff(da_zhu_zai_time_stamp)
-
-## Plot the differenced time series
-import matplotlib.pyplot as plt
-plt.plot(range(len(da_zhu_zai_time_diff)), da_zhu_zai_time_diff)
-plt.show()
-
+## Remove entries when time difference is zero since there can be
+## multiple chapters published at once.
+da_zhu_zai_time_diff = [entry for entry in do_puo_time_diff if entry > 0]
 
 ## First in the serie
 do_puo_time_stamp = get_catino_thread_time_stamps('1455308')
@@ -85,21 +97,51 @@ do_puo_time_diff = calculate_hour_diff(do_puo_time_stamp)
 ## series, it was not frequently updated due to low repulation.
 do_puo_time_diff = [entry for entry in do_puo_time_diff if entry < 720]
 
-## Plot the differenced time series
-import matplotlib.pyplot as plt
-plt.plot(range(len(do_puo_time_diff)), do_puo_time_diff)
-plt.show()
 
 ## Second in the serie
 wu_dong_time_stamp = get_catino_thread_time_stamps('1979168')
 wu_dong_time_diff = calculate_hour_diff(wu_dong_time_stamp)
+## Remove entries when time difference is zero since there can be
+## multiple chapters published at once.
+wu_dong_time_diff = [entry for entry in do_puo_time_diff if entry > 0]
 
-## Plot the differenced time series
-import matplotlib.pyplot as plt
-plt.plot(range(len(wu_dong_time_diff)), wu_dong_time_diff)
-plt.show()
 
 full_series_time_diff = do_puo_time_diff + wu_dong_time_diff + da_zhu_zai_time_diff
-import matplotlib.pyplot as plt
-plt.plot(range(len(full_series_time_diff)), full_series_time_diff)
+
+
+##################################################################################
+## Plot the differenced time series
+##################################################################################
+da_zhu_zai_length = range(len(da_zhu_zai_time_diff))
+plt.plot(da_zhu_zai_length, da_zhu_zai_time_diff)
+plt.plot(da_zhu_zai_length, savgol_filter(da_zhu_zai_time_diff, 365, 3))
 plt.show()
+
+do_puo_length = range(len(do_puo_time_diff))
+plt.plot(do_puo_length, do_puo_time_diff)
+plt.plot(do_puo_length, savgol_filter(do_puo_time_diff, 365, 3))
+plt.show()
+
+
+wu_dong_length = range(len(wu_dong_time_diff))
+plt.plot(wu_dong_length, wu_dong_time_diff)
+plt.plot(wu_dong_length, savgol_filter(wu_dong_time_diff, 365, 3))
+plt.show()
+
+
+full_series_length = range(len(full_series_time_diff))
+plt.plot(full_series_length, full_series_time_diff)
+plt.plot(full_series_length, savgol_filter(full_series_time_diff, 365, 3))
+plt.axvline(max(do_puo_length), color='r')
+plt.axvline(max(do_puo_length) + max(wu_dong_length), color='r')
+plt.show()
+
+
+##################################################################################
+## Average waiting time
+##################################################################################
+sum(do_puo_time_diff)/len(do_puo_time_diff)
+sum(wu_dong_time_diff)/len(wu_dong_time_diff)
+sum(da_zhu_zai_time_diff)/len(da_zhu_zai_time_diff)
+
+
